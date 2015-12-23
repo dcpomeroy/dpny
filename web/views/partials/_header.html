@@ -1,0 +1,24 @@
+{{define "scripts"}}{{end}}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>dpny{{if .Title}}: {{.Title}}{{end}}</title>
+    <link type="text/css" rel="stylesheet" href="{{.Bootstrap}}">
+    <link type="text/css" rel="stylesheet" href="/public/css/dpny.css">
+  </head>
+  <body>
+    <nav class="navbar navbar-top navbar-inverse">
+      <a class="navbar-brand" href="/">dpny</a>
+      <ul class="nav navbar-nav">
+        <li class="nav-item {{if eq .Title "home"}}active{{end}}">
+          <a class="nav-link" href="/">home <span class="sr-only">(current)</span></a>
+        </li>
+        <li class="nav-item {{if eq .Title "minesweeper"}}active{{end}}">
+          <a class="nav-link" href="/minesweeper">minesweeper</a>
+        </li>
+        <li class="nav-item {{if eq .Title "contact"}}active{{end}}">
+          <a class="nav-link" href="#">contact</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="container">

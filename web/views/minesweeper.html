@@ -1,0 +1,18 @@
+{{template "_header.html" .}}
+<div class="md-col-2">Total Mines: <span id="js-total-mines"></span></div>
+<div class="md-col-2">Remaining Mines: <span id="js-remaining-mines"></span></div>
+<div class="md-col-2"></div>
+
+<p class="js-loading">loading...</p>
+
+<div id="minefield">
+
+</div>
+
+{{define "scripts"}}
+  <script type="text/javascript" src="public/js/minesweeper.js"></script>
+  <script type="text/javascript">
+  	$(document).ready(Minesweeper().init);
+  </script>
+{{end}}
+{{template "_footer.html" .}}

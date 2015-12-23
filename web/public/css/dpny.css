@@ -1,0 +1,54 @@
+.navbar-top {
+	margin-bottom: 15px;
+}
+
+/* minesweeper */
+#minefield {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.minebox {
+	display: inline-block;
+	height: 30px;
+	width: 30px;
+	margin: 1px;
+	background-color: #bbb;
+	border: solid gray 1px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.minebox.exposed {
+  background-color: #ddd;
+}
+
+.minebox.bombed.last {
+  background-color: red;
+}
+
+.minebox > .bomb {
+  display: none;
+}
+
+.minebox > .flag,
+.minebox.exposed > .flag,
+.minebox.exposed.flagged > .flag {
+  visibility: hidden;
+}
+
+.minebox.bombed > .bomb {
+  display: initial;
+}
+
+.minebox.flagged > .flag {
+  visibility: visible;
+}
+
+.minebox.bombed > .flag {
+  display: none;
+}
