@@ -1,18 +1,24 @@
 {{template "_header.html" .}}
-<div class="md-col-2">Total Mines: <span id="js-total-mines"></span></div>
-<div class="md-col-2">Remaining Mines: <span id="js-remaining-mines"></span></div>
-<div class="md-col-2"></div>
+<div class="container">
+  <div class="col-md-4">Total Mines: <span id="js-total-mines"></span></div>
+  <div class="col-md-4">Remaining Mines: <span id="js-remaining-mines"></span></div>
+  <div class="col-md-4"><span id="js-winner" style="display: none;">Winner!</span></div>
+</div>
 
 <p class="js-loading">loading...</p>
-
-<div id="minefield">
-
+<div class="col-md-2"></div>
+<div class="col-md-10">
+  <div id="minefield">
+  </div>
 </div>
 
 {{define "scripts"}}
   <script type="text/javascript" src="public/js/minesweeper.js"></script>
   <script type="text/javascript">
-  	$(document).ready(Minesweeper().init);
+    $(document).ready(function() {
+      Minefield.init();
+      $('.js-loading').hide();
+    });
   </script>
 {{end}}
 {{template "_footer.html" .}}

@@ -23,7 +23,7 @@
   text-align: center;
 }
 
-.minebox.exposed {
+.minebox.revealed {
   background-color: #ddd;
 }
 
@@ -36,8 +36,8 @@
 }
 
 .minebox > .flag,
-.minebox.exposed > .flag,
-.minebox.exposed.flagged > .flag {
+.minebox.revealed > .flag,
+.minebox.revealed.flagged > .flag {
   visibility: hidden;
 }
 

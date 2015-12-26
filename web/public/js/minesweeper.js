@@ -1,42 +1,16 @@
-var Minesweeper = function() {
-  var ms = {};
-  ms.minefield = Minefield;
+// var Minesweeper = (function() {
+//   var ms = {};
+//   ms.minefield = Minefield;
 
-  ms.init = function() {
-    ms.minefield.init();
-    $('.js-loading').hide();
-  };
+//   ms.init = function() {
+    
+//   };
 
-  return ms;
-};
-
-var KeypressMonitor = (function() {
-  var modifiers = {
-    shift: 16
-  };
-  var keyHeld;
-  var kp = {};
-
-  $(document).keydown(function(e) {
-    keyHeld = e.which;
-  });
-
-  $(document).keyup(function(e) {
-    if (e.which === keyHeld) {
-      keyHeld = undefined;
-    }
-  });
-
-  kp.shiftHeld = function(){
-    return modifiers.shift === keyHeld;
-  }
-
-  return kp;
-}());
+//   return ms;
+// }());
 
 var Minefield = (function(){
-  var $minefield =  $("#minefield");
-  var minefield = [];
+  var mfm;
   var mf = {};
   var options = {
     width: 20,
@@ -48,9 +22,11 @@ var Minefield = (function(){
     if (!setOptions(width, height, mines)) {
       return false;
     }
-    createMinefieldUi();
-    createMinefieldBacking();
-  };
+    mfm = MinefieldModel;
+    mfm.init(options);
+    mfvm = MinefieldViewModel;
+    mfvm.init(mfm, click);
+   };
 
   var setOptions = function(width, height, mines) {
     if (width !== undefined) {
@@ -62,21 +38,29 @@ var Minefield = (function(){
     if (mines !== undefined) {
       options.mines = mines;
     }
+    options.boardSize = function() {
+      return options.width * options.height;
+    }
     return options.mines <= options.width * options.height;
   };
 
-  var createMinefieldUi = function() {
-    $minefield.empty();
-    for (var row = 0; row < options.height; row++) {
-      var $minefieldRow = $('<div></div>');
-      for (var col = 0; col < options.width; col++) {
-        $minefieldRow.append(Mine.new(mf, row, col));
-      }
-      $minefield.append($minefieldRow);
+  var click = function(coor, $minebox) {
+    if (KeypressMonitor.shiftHeld()) {
+      mfm.toggleFlagged(coor);
+    } else if (!mfm.isFlagged(coor)) {
+      mfm.revealAdjacent(coor);
     }
   };
 
-  var createMinefieldBacking = function() {
+  return mf;
+}());
+
+var MinefieldModel = (function(){
+  var mfm = {};
+  var minefield;
+
+  mfm.init = function(opts) {
+    mfm.options = opts;
     initializeMinefield();
     generateMines();
     generateMineCounts();
@@ -84,60 +68,57 @@ var Minefield = (function(){
 
   var initializeMinefield = function() {
     minefield = [];
-    for (var row = 0; row < options.height; row++) {
+    for (var row = 0; row < mfm.options.height; row++) {
       minefield[row] = [];
-      for (var col = 0; col < options.width; col++) {
+      for (var col = 0; col < mfm.options.width; col++) {
         minefield[row][col] = MineStates.Empty;
       }
     }
   };
 
   var generateMines = function() {
-    for (var m = 0; m < options.mines; m++) {
-      var rowCol = indexToRowCol(randomMineIndex());
-      var state = minefield[rowCol.row][rowCol.col];
-      if (state !== MineStates.Empty) {
+    for (var m = 0; m < mfm.options.mines; m++) {
+      var coor = indexToCoor(randomMineIndex());
+      if (!mfm.isEmpty(coor)) {
         // try again
         m--; continue;
       }
-      minefield[rowCol.row][rowCol.col] = MineStates.Mined;
+      minefield[coor.row][coor.col] = MineStates.Mined;
     }
   };
 
   var generateMineCounts = function() {
-    for (var i = 0; i < boardSize(); i++) {
-      var rowCol = indexToRowCol(i);
-      if (!isMined(rowCol.row, rowCol.col)) {
-        minefield[rowCol.row][rowCol.col] = countAdjacentMines(rowCol.row, rowCol.col);
-      }
+    for (var i = 0; i < mfm.options.boardSize(); i++) {
+      setMineCount(indexToCoor(i));
     }
-  }
+  };
 
-  var isMined = function(row, col) {
-    return (minefield[row][col] & MineStates.Mined) !== 0;
-  }
+  var setMineCount = function(coor) {
+    var val = minefield[coor.row][coor.col];
+    var count = countAdjacentMines(coor);
+    minefield[coor.row][coor.col] = (val & ~MINECOUNTMASK) | count;
+  };
 
-  var countAdjacentMines = function(row, col) {
-    var adjacent = getAdjacentCells(row, col);
+  var countAdjacentMines = function(coor) {
+    var adjacent = getAdjacentCells(coor);
     var count = 0;
     for (var i in adjacent) {
-      var a = adjacent[i]
-      if (isMined(a.row, a.col)) {
+      if (mfm.isMined(adjacent[i])) {
           count++;
       }
     }
     return count;
   };
 
-  var getAdjacentCells = function(row, col) {
-    var adjacent = []
+  var getAdjacentCells = function(coor) {
+    var adjacent = [];
     for (var i = -1; i <= 1; i++) {
       for (var j = -1; j <= 1; j++) {
-        var checkRow = row + i,
-          checkCol = col + j;
+        var checkRow = coor.row + i,
+          checkCol = coor.col + j;
         if (minefield[checkRow] !== undefined && 
           minefield[checkRow][checkCol] !== undefined) {
-          adjacent.push({row: checkRow, col: checkCol});
+          adjacent.push(Coordinate.new(checkRow, checkCol));
         }
       }
     }
@@ -145,146 +126,243 @@ var Minefield = (function(){
   };
 
   var randomMineIndex = function() {
-    return Math.floor(Math.random() * boardSize());
-  };
-
-  var boardSize = function() {
-    return options.width * options.height;
-  }
-
-  var indexToRowCol = function(i) {
-    return {row: Math.floor(i / options.width), col: i % options.width};
-  };
-
-  mf.click = function(row, col, $minebox) {
-    if (KeypressMonitor.shiftHeld()) {
-      triggerFlag(row, col, $minebox);
-    } else {
-      triggerBomb(row, col, $minebox)
-    }
-  };
-
-  var triggerFlag = function(row, col, $minebox) {
-    toggleFlagged(row, col);
-    updateFlagUi($minebox);
-    updateFlagCount();
-  };
-
-  var updateFlagCount = function() {
-    $('#js-remaining-mines').html(options.mines-countFlags());
+    return Math.floor(Math.random() * mfm.options.boardSize());
   };
 
   var countFlags = function() {
     var count = 0;
-    for (var i = 0; i < boardSize(); i++) {
-      var rowCol = indexToRowCol(i);
-      if (isFlagged(rowCol.row, rowCol.col)) {
+    for (var i = 0; i < mfm.options.boardSize(); i++) {
+      if (mfm.isFlagged(indexToCoor(i))) {
         count++;
       }
     }
     return count;
-  }
-
-  var isFlagged = function(row, col) {
-    return (minefield[row][col] & MineStates.Flagged) !== 0;
-  }
-
-  var triggerBomb = function(row, col, $minebox) {
-    if (isFlagged(row, col)) {
-      return;
-    }
-    if (isMined(row, col)) {
-      $minebox.addClass('last');
-      exposeAll();
-    } else {
-      exposeAdjacent(row, col);
-    }
   };
 
-  var exposeAll = function() {
-    for (var i = 0; i < boardSize(); i++) {
-      var rowCol = indexToRowCol(i);
-      if (isMined(rowCol.row, rowCol.col)) {
-        getMine(rowCol.row, rowCol.col).addClass('bombed');
-      } else {
-        expose(rowCol.row, rowCol.col);
+  mfm.revealAdjacent = function(coor) {
+    if (hasState(coor, MineStates.Revealed) ||
+      hasState(coor, MineStates.Flagged)) {
+      return;
+    }
+    reveal(coor);
+    if (mfm.isMined(coor)) {
+      exploded = true;
+      revealAll();
+      return;
+    }
+    if (mfm.isEmpty(coor)) {
+      var adjacent = getAdjacentCells(coor);
+      for (var i in adjacent) {
+        mfm.revealAdjacent(adjacent[i]);
       }
     }
   };
 
-  var exposeAdjacent = function(row, col) {
-    if (getMine(row, col).hasClass('exposed')) {
-      return;
-    }
-    expose(row, col);
-    if (minefield[row][col] !== MineStates.Empty) {
-      return;
-    }
-    var adjacent = getAdjacentCells(row, col);
-    for (var i in adjacent) {
-      var a = adjacent[i];
-      exposeAdjacent(a.row, a.col);
+  var revealAll = function() {
+    for (var i = 0; i < mfm.options.boardSize(); i++) {
+      var coor = indexToCoor(i);
+      if (mfm.isFlagged(coor)) {
+        mfm.toggleFlagged(coor);
+      }
+      reveal(coor);
     }
   };
 
-  var expose = function(row, col) {
-    var $mine = getMine(row, col)
-    $mine.addClass('exposed');
-    var val = minefield[row][col] & 0xF;
-    if (val !== MineStates.Empty) {
-       $mine.html(val);
+  var reveal = function(coor) {
+    minefield[coor.row][coor.col] |= MineStates.Revealed;
+  };
+
+  mfm.isEmpty = function(coor) {
+    return !mfm.isMined(coor) && mfm.adjacentMines(coor) === 0;
+  };
+
+  mfm.isRevealed = function(coor) {
+    return hasState(coor, MineStates.Revealed);
+  };
+
+  mfm.isMined = function(coor) {
+    return hasState(coor, MineStates.Mined);
+  };
+
+  mfm.isFlagged = function(coor) {
+    return hasState(coor, MineStates.Flagged);
+  };
+
+  mfm.adjacentMines = function(coor) {
+    return minefield[coor.row][coor.col] & MINECOUNTMASK;
+  }
+
+  var hasState = function(coor, state) {
+    return (minefield[coor.row][coor.col] & state) !== 0;
+  };
+
+  mfm.toggleFlagged = function(coor) {
+    return minefield[coor.row][coor.col] ^= MineStates.Flagged;
+  };
+
+  var indexToCoor = function(i) {
+    return Coordinate.new(Math.floor(i / mfm.options.width), i % mfm.options.width);
+  };
+
+  mfm.allCoors = function() {
+    var coors = [];
+    for (var row = 0; row < mfm.options.height; row++) {
+      for (var col = 0; col < mfm.options.width; col++) {
+        coors.push(Coordinate.new(row, col));
+      }
+    }
+    return coors;
+  };
+
+  var MINECOUNTMASK = 0xF;
+
+  var MineStates = (function(){
+    var ms = {};
+    ms.Empty = 0;
+    // 1-8 reserved for mine counts
+    ms.Mined = 1 << 4;
+    ms.Flagged = 1 << 5;
+    ms.Revealed = 1 << 6;
+    return ms;
+  }());
+
+  return mfm;
+}());
+
+var MinefieldViewModel = (function() {
+  var mfvm = {};
+  var mfm;
+  var $minefield = $('#minefield')
+  var click;
+
+  mfvm.init = function(minefieldModel, clickFunction) {
+    mfm = minefieldModel;
+    click = clickFunction;
+    createMinefieldUi();
+    update();
+  };
+
+  var createMinefieldUi = function() {
+    $minefield.empty();
+    for (var row = 0; row < mfm.options.height; row++) {
+      var $minefieldRow = $('<div></div>');
+      for (var col = 0; col < mfm.options.width; col++) {
+        $minefieldRow.append(Mine.new(click, Coordinate.new(row, col)));
+      }
+      $minefield.append($minefieldRow);
     }
   };
 
-  var getMine = function(row, col) {
-    return $('#mine-'+row+'-'+col);
+  var getMine = function(coor) {
+    return $('#mine-'+coor.row+'-'+coor.col);
   };
 
-  var toggleFlagged = function(row, col) {
-    return minefield[row][col] ^= MineStates.Flagged;
-  };
-
-  var updateFlagUi = function($minebox) {
+  var toggleFlag = function($minebox) {
     $minebox.toggleClass('flagged');
   };
 
-  return mf;
-}(MineStates));
+  var Mine = (function() {
+    var m = {};
 
-var Mine = (function() {
-  var m = {};
+    m.new = function(click, coor) {
+      var $m = $('<div></div>')
+        .append(bombIcon())
+        .append(flagIcon())
+        .addClass('minebox')
+        .prop('id', 'mine-'+coor.row+'-'+coor.col);
 
-  m.new = function(mf, row, col) {
-    var $m = $('<div></div>')
-      .append(bombIcon())
-      .append(flagIcon())
-      .addClass('minebox')
-      .prop('id', 'mine-'+row+'-'+col);
+      $m.click(function() {
+        click(coor, $(this));
+        update(coor);
+      });
 
-    $m.click(function() {
-      mf.click(row, col, $(this));
-    });
+      return $m;
+    };
 
-    return $m;
+    var bombIcon = function() {
+      return $('<span class="glyphicon glyphicon-fire bomb" aria-hidden="true"></span>');
+    };
+
+    var flagIcon = function() {
+      return $('<span class="glyphicon glyphicon-flag flag" aria-hidden="true"></span>');
+    };
+
+    return m;
+  }());
+
+  var update = function(last) {
+    var flagCount = 0;
+    var revealCount = 0;
+    var coors = mfm.allCoors();
+    for (var i in coors) {
+      var coor = coors[i];
+      var $mine = getMine(coor);
+      if (mfm.isFlagged(coor)) {
+        flagCount++;
+        ensureClass($mine, 'flagged');
+        continue;
+      } else {
+        $mine.removeClass('flagged');
+      }
+      if (!mfm.isRevealed(coor)) {
+        continue;
+      }
+      revealCount++;
+      ensureClass($mine, 'revealed');
+      if (mfm.isMined(coor)) {
+        ensureClass($mine, 'bombed');
+        if (last !== undefined && last.row === coor.row && last.col === coor.col) {
+          ensureClass($mine, 'last');
+        }
+        continue;
+      }
+      if (!mfm.isEmpty(coor)) {
+        $mine.html(mfm.adjacentMines(coor));
+      }
+    }
+    $('#js-total-mines').html(mfm.options.mines);
+    $('#js-remaining-mines').html(mfm.options.mines - flagCount);
+    if (mfm.options.mines + revealCount === mfm.options.boardSize()) {
+      $('#js-winner').show();
+    }
   };
 
-  var bombIcon = function() {
-    return $('<span class="glyphicon glyphicon-fire bomb" aria-hidden="true"></span>');
+  var ensureClass = function($el, clazz) {
+    if (!$el.hasClass(clazz)) {
+      $el.addClass(clazz);
+    }
   };
 
-  var flagIcon = function() {
-    return $('<span class="glyphicon glyphicon-flag flag" aria-hidden="true"></span>');
-  };
-
-  return m;
+  return mfvm;
 }());
 
-var MineStates = (function(){
-  var ms = {};
-  ms.Empty = 0;
-  // 1-8 reserved for mine counts
-  ms.Mined = 1 << 4;
-  ms.Flagged = 1 << 5;
-  ms.Revealed = 1 << 6;
-  return ms;
+var Coordinate = (function() {
+  return {
+    new: function(row, col) {
+      return {row: row, col: col};
+    }
+  };
+}());
+
+
+var KeypressMonitor = (function() {
+  var modifiers = {
+    shift: 16
+  };
+  var keyHeld;
+  var kp = {};
+
+  $(document).keydown(function(e) {
+    keyHeld = e.which;
+  });
+  $(document).keyup(function(e) {
+    if (e.which === keyHeld) {
+      keyHeld = undefined;
+    }
+  });
+
+  kp.shiftHeld = function(){
+    return modifiers.shift === keyHeld;
+  }
+  return kp;
 }());
