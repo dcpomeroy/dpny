@@ -37,6 +37,7 @@ func main() {
 	flag.Parse()
 	router := httprouter.New()
 	router.GET("/", Homepage)
+	router.GET("/healthy", Healthy)
 	router.GET("/minesweeper", Minesweeper)
 	router.ServeFiles("/public/*filepath", http.Dir("web/public"))
 
@@ -59,4 +60,8 @@ func executeTemplate(w http.ResponseWriter, t string, d map[string]interface{}) 
 
 func Minesweeper(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	executeTemplate(w, "minesweeper.html", map[string]interface{}{"Title": "minesweeper"})
+}
+
+func Healthy(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.Write([]byte("good"))
 }
