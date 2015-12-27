@@ -52,3 +52,27 @@
 .minebox.bombed > .flag {
   display: none;
 }
+
+.setting {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.settings-label {
+  display: inline-block;
+  width: 100px;
+}
+
+.settings-box {
+  display: inline-block;
+  width: 50px;
+}
+
+.reset-btn {
+  margin-top: 10px;
+}
+
+#js-winner {
+  font-weight: bold;
+  z-index: 100;
+}

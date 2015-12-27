@@ -1,22 +1,103 @@
-// var Minesweeper = (function() {
-//   var ms = {};
-//   ms.minefield = Minefield;
+var Defaults = {
+  width: 20,
+  height: 10,
+  mines: 30
+};
 
-//   ms.init = function() {
-    
-//   };
+var Minesweeper = (function() {
+  var ms = {};
 
-//   return ms;
-// }());
+  ms.init = function() {
+    $('#js-width-slider').slider(sliderSettings({
+      max: 40,
+      value: Defaults.width
+    }));
+    $('#js-height-slider').slider(sliderSettings({
+      max: 40,
+      value: Defaults.height
+    }));
+    $('#js-mines-slider').slider(sliderSettings({
+      max: Defaults.width * Defaults.height / 2,
+      value: Defaults.mines
+    }));
+
+    $('input#js-width').val(Defaults.width);
+    $('input#js-height').val(Defaults.height);
+    $('input#js-mines').val(Defaults.mines);
+
+    $('#minefield').click(function() {
+      $('input#js-width').prop('disabled', true);
+      $('input#js-height').prop('disabled', true);
+      $('input#js-mines').prop('disabled', true);
+      $('#js-width-slider').slider('disable');
+      $('#js-height-slider').slider('disable');
+      $('#js-mines-slider').slider('disable');
+    });
+
+    $('.js-reset').click(function() {
+      $('input#js-width').prop('disabled', false);
+      $('input#js-height').prop('disabled', false);
+      $('input#js-mines').prop('disabled', false);
+      $('#js-width-slider').slider('enable');
+      $('#js-height-slider').slider('enable');
+      $('#js-mines-slider').slider('enable');
+      $('#js-winner').hide();
+      Minefield.init();
+    });
+
+    $('body').on('minesweeper.gameover', function(e) {
+      $('#js-winner').show('puff', {percent: 500}, 'slow');
+      Minefield.gameover = true;
+    });
+
+    Minefield.init();
+  };
+
+  var slide = function(e, ui) {
+    var width = $('#js-width-slider').slider('value'),
+      height = $('#js-height-slider').slider('value'),
+      mines = $('#js-mines-slider').slider('value');
+
+    switch ($(ui.handle).parent().attr('id')) {
+      case 'js-width-slider':
+        width = ui.value;
+        break;
+      case 'js-height-slider':
+        height = ui.value;
+        break;
+      case 'js-mines-slider':
+        mines = ui.value;
+        break;
+    }
+
+    var max = width * height / 2;
+    if (mines > max) {
+      mines = max;
+    }
+
+    $('input#js-width').val(width);
+    $('input#js-height').val(height);
+    $('input#js-mines').val(mines);
+
+    $('#js-mines-slider').slider('option', 'max', max);
+    Minefield.init(width, height, mines);
+  };
+
+  var sliderSettings = function(d) {
+    return $.extend({
+      min: 1,
+      slide: slide,
+      stop: slide
+    }, d);
+  };
+
+  return ms;
+}());
 
 var Minefield = (function(){
-  var mfm;
+  var mfm, mfvm;
   var mf = {};
-  var options = {
-    width: 20,
-    height: 10,
-    mines: 20
-  };
+  var options = $.extend({}, Defaults);
 
   mf.init = function(width, height, mines) {
     if (!setOptions(width, height, mines)) {
@@ -25,7 +106,8 @@ var Minefield = (function(){
     mfm = MinefieldModel;
     mfm.init(options);
     mfvm = MinefieldViewModel;
-    mfvm.init(mfm, click);
+    mfvm.init(mfm, click, dblclick);
+    mf.gameover = false;
    };
 
   var setOptions = function(width, height, mines) {
@@ -44,11 +126,36 @@ var Minefield = (function(){
     return options.mines <= options.width * options.height;
   };
 
-  var click = function(coor, $minebox) {
+  var click = function(coor) {
+    if (mf.gameover) {
+      return;
+    }
     if (KeypressMonitor.shiftHeld()) {
       mfm.toggleFlagged(coor);
     } else if (!mfm.isFlagged(coor)) {
       mfm.revealAdjacent(coor);
+    }
+  };
+
+  var dblclick = function(coor) {
+    if (mf.gameover) {
+      return;
+    }
+    var adjacent = mfm.getAdjacentCells(coor);
+    var flags = 0;
+    for (var i in adjacent) {
+      if (mfm.isFlagged(adjacent[i])) {
+        flags++;
+      }
+    }
+    var mines = mfm.adjacentMines(coor);
+    if (flags !== mines) {
+      return;
+    }
+    for (var i in adjacent) {
+      if (!mfm.isFlagged(adjacent[i])) {
+        mfm.revealAdjacent(adjacent[i]);
+      }
     }
   };
 
@@ -100,7 +207,7 @@ var MinefieldModel = (function(){
   };
 
   var countAdjacentMines = function(coor) {
-    var adjacent = getAdjacentCells(coor);
+    var adjacent = mfm.getAdjacentCells(coor);
     var count = 0;
     for (var i in adjacent) {
       if (mfm.isMined(adjacent[i])) {
@@ -110,7 +217,7 @@ var MinefieldModel = (function(){
     return count;
   };
 
-  var getAdjacentCells = function(coor) {
+  mfm.getAdjacentCells = function(coor) {
     var adjacent = [];
     for (var i = -1; i <= 1; i++) {
       for (var j = -1; j <= 1; j++) {
@@ -151,7 +258,7 @@ var MinefieldModel = (function(){
       return;
     }
     if (mfm.isEmpty(coor)) {
-      var adjacent = getAdjacentCells(coor);
+      var adjacent = mfm.getAdjacentCells(coor);
       for (var i in adjacent) {
         mfm.revealAdjacent(adjacent[i]);
       }
@@ -168,7 +275,7 @@ var MinefieldModel = (function(){
     }
   };
 
-  var reveal = function(coor) {
+  reveal = function(coor) {
     minefield[coor.row][coor.col] |= MineStates.Revealed;
   };
 
@@ -233,11 +340,12 @@ var MinefieldViewModel = (function() {
   var mfvm = {};
   var mfm;
   var $minefield = $('#minefield')
-  var click;
+  var click, dblclick;
 
-  mfvm.init = function(minefieldModel, clickFunction) {
+  mfvm.init = function(minefieldModel, clickFunction, dblclickFunction) {
     mfm = minefieldModel;
     click = clickFunction;
+    dblclick = dblclickFunction;
     createMinefieldUi();
     update();
   };
@@ -247,7 +355,7 @@ var MinefieldViewModel = (function() {
     for (var row = 0; row < mfm.options.height; row++) {
       var $minefieldRow = $('<div></div>');
       for (var col = 0; col < mfm.options.width; col++) {
-        $minefieldRow.append(Mine.new(click, Coordinate.new(row, col)));
+        $minefieldRow.append(Mine.new(Coordinate.new(row, col), click, dblclick));
       }
       $minefield.append($minefieldRow);
     }
@@ -264,7 +372,7 @@ var MinefieldViewModel = (function() {
   var Mine = (function() {
     var m = {};
 
-    m.new = function(click, coor) {
+    m.new = function(coor, click, dblclick) {
       var $m = $('<div></div>')
         .append(bombIcon())
         .append(flagIcon())
@@ -272,7 +380,12 @@ var MinefieldViewModel = (function() {
         .prop('id', 'mine-'+coor.row+'-'+coor.col);
 
       $m.click(function() {
-        click(coor, $(this));
+        click(coor);
+        update(coor);
+      });
+
+      $m.dblclick(function() {
+        dblclick(coor);
         update(coor);
       });
 
@@ -320,10 +433,9 @@ var MinefieldViewModel = (function() {
         $mine.html(mfm.adjacentMines(coor));
       }
     }
-    $('#js-total-mines').html(mfm.options.mines);
-    $('#js-remaining-mines').html(mfm.options.mines - flagCount);
+    $('#js-flags').html(flagCount);
     if (mfm.options.mines + revealCount === mfm.options.boardSize()) {
-      $('#js-winner').show();
+      $('body').trigger('minesweeper.gameover');
     }
   };
 

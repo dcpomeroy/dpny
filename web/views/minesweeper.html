@@ -1,22 +1,38 @@
 {{template "_header.html" .}}
 <div class="container">
-  <div class="col-md-4">Total Mines: <span id="js-total-mines"></span></div>
-  <div class="col-md-4">Remaining Mines: <span id="js-remaining-mines"></span></div>
+  <div class="col-md-4"><span>Flags: </span><span id="js-flags"></span></div>
   <div class="col-md-4"><span id="js-winner" style="display: none;">Winner!</span></div>
+  <div class="col-md-4"></div>
 </div>
 
-<p class="js-loading">loading...</p>
-<div class="col-md-2"></div>
-<div class="col-md-10">
-  <div id="minefield">
+<div class="col-md-3">
+  <div class="setting">
+    <span class="settings-label">Width:</span>
+    <input type="text" id="js-width" class="settings-box">
   </div>
+  <div id="js-width-slider" class="width"></div>
+  <div class="setting">
+    <span class="settings-label">Height:</span>
+    <input type="text" id="js-height" class="settings-box">
+  </div>
+  <div id="js-height-slider" class="height"></div>
+  <div class="setting">
+    <span class="settings-label">Mines:</span>
+    <input type="text" id="js-mines" class="settings-box">
+  </div>
+  <div id="js-mines-slider" class="mines"></div>
+  <button class="btn reset-btn js-reset">Reset</button>
+</div>
+<div class="col-md-9">
+  <p class="js-loading">loading...</p>
+  <div id="minefield"></div>
 </div>
 
 {{define "scripts"}}
   <script type="text/javascript" src="public/js/minesweeper.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
-      Minefield.init();
+      Minesweeper.init();
       $('.js-loading').hide();
     });
   </script>
