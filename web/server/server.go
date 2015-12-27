@@ -34,6 +34,7 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
 	router := httprouter.New()
 	router.GET("/", Homepage)
 	router.GET("/minesweeper", Minesweeper)
